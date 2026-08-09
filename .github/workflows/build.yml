@@ -1,0 +1,41 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # RPKit is a 71-module Gradle build; the default 360-minute cap is far more
+    # runway than a hung build should ever get.
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Gradle 7.6 + Kotlin 1.7.22 + jvmTarget 17 only runs on a JDK in the
+      # 17-19 range: JDK 21 fails with "Unsupported class file major version 65"
+      # and JDK 11 fails plugin resolution. Pin 17 explicitly rather than
+      # inheriting whatever the runner image ships.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # Compile and test are separate steps so a failure is attributable: a red
+      # "Compile" is a source/codegen break, a red "Test" is a behaviour break.
+      - name: Compile
+        run: ./gradlew compileKotlin --no-daemon
+
+      - name: Test
+        run: ./gradlew test --no-daemon
