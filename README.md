@@ -37,7 +37,7 @@ Every module declares the modules it needs under `depend:` in its own `plugin.ym
 
 1. Obtain the module JARs, either by building them from source (see [Compiling the Project](#compiling-the-project)) or by downloading them from the upstream [releases page](https://github.com/RP-Kit/RPKit/releases). Each module is a separate download; if you are not sure which ones you need, take all of them.
 2. Place the JAR files in the `plugins` directory of your server.
-3. Start your server. Each plugin creates its own data folder named after itself — for example `plugins/rpk-players-bukkit/` — and writes its default configuration there. Modules that use a database also write a `database.yml` into that folder, defaulting to SQLite (`jdbc:sqlite:rpkit_players.db`); `MYSQL` is the other supported dialect.
+3. Start your server. Each plugin creates its own data folder named after itself — for example `plugins/rpk-players-bukkit/` — and writes its default configuration there. Modules that use a database also write a `database.yml` into that folder, defaulting to SQLite with a database file of its own named after the module (`rpk-players-bukkit` uses `jdbc:sqlite:rpkit_players.db`, `rpk-chat-bukkit` uses `jdbc:sqlite:rpkit_chat.db`, and so on); `MYSQL` is the other supported dialect.
 4. Edit the generated `config.yml` and `database.yml` files to taste.
 5. Restart your server.
 
