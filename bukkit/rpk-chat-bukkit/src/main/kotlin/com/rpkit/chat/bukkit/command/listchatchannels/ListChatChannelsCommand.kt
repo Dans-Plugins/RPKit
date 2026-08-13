@@ -16,8 +16,10 @@
 package com.rpkit.chat.bukkit.command.listchatchannels
 
 import com.rpkit.chat.bukkit.RPKChatBukkit
+import com.rpkit.chat.bukkit.chatchannel.RPKChatChannel
 import com.rpkit.chat.bukkit.chatchannel.RPKChatChannelService
 import com.rpkit.core.service.Services
+import com.rpkit.players.bukkit.profile.minecraft.RPKMinecraftProfile
 import com.rpkit.players.bukkit.profile.minecraft.RPKMinecraftProfileService
 import net.md_5.bungee.api.ChatColor
 import net.md_5.bungee.api.chat.BaseComponent
@@ -29,6 +31,7 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import java.util.concurrent.CompletableFuture
 import java.util.regex.Pattern
 
 /**
@@ -61,103 +64,38 @@ class ListChatChannelsCommand(private val plugin: RPKChatBukkit) : CommandExecut
             sender.sendMessage(plugin.messages["no-chat-channel-service"])
             return true
         }
-        chatChannelService.chatChannels.forEach { chatChannel ->
-            chatChannel.listeners.thenAccept { listeners ->
-                val messageComponents = mutableListOf<BaseComponent>()
-                val pattern = Pattern.compile("(\\\$\\{channel\\})|(\\\$\\{mute\\})|(${ChatColor.COLOR_CHAR}x(${ChatColor.COLOR_CHAR}[0-9a-f]){6})|(${ChatColor.COLOR_CHAR}[0-9a-f])")
-                val template = plugin.messages["listchatchannels-item", mapOf(
-                    "color" to ChatColor.of(chatChannel.color).toString()
-                )]
-                val matcher = pattern.matcher(template)
-                var chatColor: ChatColor? = null
-                var chatFormat: ChatColor? = null
-                var index = 0
-                while (matcher.find()) {
-                    if (index != matcher.start()) {
-                        val textComponent = TextComponent(template.substring(index, matcher.start()))
-                        if (chatColor != null) {
-                            textComponent.color = chatColor
-                        }
-                        if (chatFormat != null) {
-                            textComponent.isObfuscated = chatFormat == ChatColor.MAGIC
-                            textComponent.isBold = chatFormat == ChatColor.BOLD
-                            textComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
-                            textComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
-                            textComponent.isItalic = chatFormat == ChatColor.ITALIC
-                        }
-                        messageComponents.add(textComponent)
-                    }
-                    if (matcher.group() == "\${channel}") {
-                        val chatChannelComponent = TextComponent(chatChannel.name.value)
-                        chatChannelComponent.clickEvent = ClickEvent(ClickEvent.Action.RUN_COMMAND, "/chatchannel ${chatChannel.name.value}")
-                        chatChannelComponent.hoverEvent = HoverEvent(HoverEvent.Action.SHOW_TEXT, Text("Click to talk in ${chatChannel.name.value}"))
-                        if (chatColor != null) {
-                            chatChannelComponent.color = chatColor
-                        }
-                        if (chatFormat != null) {
-                            chatChannelComponent.isObfuscated = chatFormat == ChatColor.MAGIC
-                            chatChannelComponent.isBold = chatFormat == ChatColor.BOLD
-                            chatChannelComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
-                            chatChannelComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
-                            chatChannelComponent.isItalic = chatFormat == ChatColor.ITALIC
-                        }
-                        messageComponents.add(chatChannelComponent)
-                    } else if (matcher.group() == "\${mute}") {
-                        if (listeners.any { listenerMinecraftProfile ->
-                                listenerMinecraftProfile.id == minecraftProfile.id
-                            }) {
-                            val muteComponent = TextComponent("Mute")
-                            muteComponent.clickEvent = ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mute ${chatChannel.name.value}")
-                            muteComponent.hoverEvent = HoverEvent(HoverEvent.Action.SHOW_TEXT, Text("Click to mute ${chatChannel.name.value}"))
-                            if (chatColor != null) {
-                                muteComponent.color = chatColor
-                            }
-                            if (chatFormat != null) {
-                                muteComponent.isObfuscated = chatFormat == ChatColor.MAGIC
-                                muteComponent.isBold = chatFormat == ChatColor.BOLD
-                                muteComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
-                                muteComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
-                                muteComponent.isItalic = chatFormat == ChatColor.ITALIC
-                            }
-                            messageComponents.add(muteComponent)
-                        } else {
-                            val unmuteComponent = TextComponent("Unmute")
-                            unmuteComponent.clickEvent = ClickEvent(ClickEvent.Action.RUN_COMMAND, "/unmute ${chatChannel.name.value}")
-                            unmuteComponent.hoverEvent = HoverEvent(HoverEvent.Action.SHOW_TEXT, Text("Click to unmute ${chatChannel.name.value}"))
-                            if (chatColor != null) {
-                                unmuteComponent.color = chatColor
-                            }
-                            if (chatFormat != null) {
-                                unmuteComponent.isObfuscated = chatFormat == ChatColor.MAGIC
-                                unmuteComponent.isBold = chatFormat == ChatColor.BOLD
-                                unmuteComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
-                                unmuteComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
-                                unmuteComponent.isItalic = chatFormat == ChatColor.ITALIC
-                            }
-                            messageComponents.add(unmuteComponent)
-                        }
-                    } else {
-                        val match = matcher.group()
-                        if (match.startsWith("${ChatColor.COLOR_CHAR}x") && match.length == 14) {
-                            chatColor = ChatColor.of("#${match[3]}${match[5]}${match[7]}${match[9]}${match[11]}${match[13]}")
-                        } else {
-                            val colorOrFormat = ChatColor.getByChar(match.drop(1)[0])
-                            if (colorOrFormat?.color != null) {
-                                chatColor = colorOrFormat
-                                chatFormat = null
-                            }
-                            if (colorOrFormat?.color == null) {
-                                chatFormat = colorOrFormat
-                            }
-                            if (colorOrFormat == ChatColor.RESET) {
-                                chatColor = null
-                                chatFormat = null
-                            }
-                        }
-                    }
-                    index = matcher.end()
-                }
-                val textComponent = TextComponent(template.substring(index, template.length))
+        // Every listeners query is started before any of them is awaited, so they still run
+        // concurrently, but the lines are sent in chat channel order rather than in whichever
+        // order the queries happen to finish in.
+        val chatChannels = chatChannelService.chatChannels.toList()
+        val listenersFutures = chatChannels.map(RPKChatChannel::listeners)
+        CompletableFuture.allOf(*listenersFutures.toTypedArray()).thenAccept {
+            chatChannels.forEachIndexed { index, chatChannel ->
+                sender.spigot().sendMessage(
+                    *chatChannelComponents(chatChannel, listenersFutures[index].join(), minecraftProfile)
+                )
+            }
+        }
+        return true
+    }
+
+    private fun chatChannelComponents(
+        chatChannel: RPKChatChannel,
+        listeners: List<RPKMinecraftProfile>,
+        minecraftProfile: RPKMinecraftProfile
+    ): Array<BaseComponent> {
+        val messageComponents = mutableListOf<BaseComponent>()
+        val pattern = Pattern.compile("(\\\$\\{channel\\})|(\\\$\\{mute\\})|(${ChatColor.COLOR_CHAR}x(${ChatColor.COLOR_CHAR}[0-9a-f]){6})|(${ChatColor.COLOR_CHAR}[0-9a-f])")
+        val template = plugin.messages["listchatchannels-item", mapOf(
+            "color" to ChatColor.of(chatChannel.color).toString()
+        )]
+        val matcher = pattern.matcher(template)
+        var chatColor: ChatColor? = null
+        var chatFormat: ChatColor? = null
+        var index = 0
+        while (matcher.find()) {
+            if (index != matcher.start()) {
+                val textComponent = TextComponent(template.substring(index, matcher.start()))
                 if (chatColor != null) {
                     textComponent.color = chatColor
                 }
@@ -169,9 +107,89 @@ class ListChatChannelsCommand(private val plugin: RPKChatBukkit) : CommandExecut
                     textComponent.isItalic = chatFormat == ChatColor.ITALIC
                 }
                 messageComponents.add(textComponent)
-                sender.spigot().sendMessage(*messageComponents.toTypedArray())
             }
+            if (matcher.group() == "\${channel}") {
+                val chatChannelComponent = TextComponent(chatChannel.name.value)
+                chatChannelComponent.clickEvent = ClickEvent(ClickEvent.Action.RUN_COMMAND, "/chatchannel ${chatChannel.name.value}")
+                chatChannelComponent.hoverEvent = HoverEvent(HoverEvent.Action.SHOW_TEXT, Text("Click to talk in ${chatChannel.name.value}"))
+                if (chatColor != null) {
+                    chatChannelComponent.color = chatColor
+                }
+                if (chatFormat != null) {
+                    chatChannelComponent.isObfuscated = chatFormat == ChatColor.MAGIC
+                    chatChannelComponent.isBold = chatFormat == ChatColor.BOLD
+                    chatChannelComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
+                    chatChannelComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
+                    chatChannelComponent.isItalic = chatFormat == ChatColor.ITALIC
+                }
+                messageComponents.add(chatChannelComponent)
+            } else if (matcher.group() == "\${mute}") {
+                if (listeners.any { listenerMinecraftProfile ->
+                        listenerMinecraftProfile.id == minecraftProfile.id
+                    }) {
+                    val muteComponent = TextComponent("Mute")
+                    muteComponent.clickEvent = ClickEvent(ClickEvent.Action.RUN_COMMAND, "/mute ${chatChannel.name.value}")
+                    muteComponent.hoverEvent = HoverEvent(HoverEvent.Action.SHOW_TEXT, Text("Click to mute ${chatChannel.name.value}"))
+                    if (chatColor != null) {
+                        muteComponent.color = chatColor
+                    }
+                    if (chatFormat != null) {
+                        muteComponent.isObfuscated = chatFormat == ChatColor.MAGIC
+                        muteComponent.isBold = chatFormat == ChatColor.BOLD
+                        muteComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
+                        muteComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
+                        muteComponent.isItalic = chatFormat == ChatColor.ITALIC
+                    }
+                    messageComponents.add(muteComponent)
+                } else {
+                    val unmuteComponent = TextComponent("Unmute")
+                    unmuteComponent.clickEvent = ClickEvent(ClickEvent.Action.RUN_COMMAND, "/unmute ${chatChannel.name.value}")
+                    unmuteComponent.hoverEvent = HoverEvent(HoverEvent.Action.SHOW_TEXT, Text("Click to unmute ${chatChannel.name.value}"))
+                    if (chatColor != null) {
+                        unmuteComponent.color = chatColor
+                    }
+                    if (chatFormat != null) {
+                        unmuteComponent.isObfuscated = chatFormat == ChatColor.MAGIC
+                        unmuteComponent.isBold = chatFormat == ChatColor.BOLD
+                        unmuteComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
+                        unmuteComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
+                        unmuteComponent.isItalic = chatFormat == ChatColor.ITALIC
+                    }
+                    messageComponents.add(unmuteComponent)
+                }
+            } else {
+                val match = matcher.group()
+                if (match.startsWith("${ChatColor.COLOR_CHAR}x") && match.length == 14) {
+                    chatColor = ChatColor.of("#${match[3]}${match[5]}${match[7]}${match[9]}${match[11]}${match[13]}")
+                } else {
+                    val colorOrFormat = ChatColor.getByChar(match.drop(1)[0])
+                    if (colorOrFormat?.color != null) {
+                        chatColor = colorOrFormat
+                        chatFormat = null
+                    }
+                    if (colorOrFormat?.color == null) {
+                        chatFormat = colorOrFormat
+                    }
+                    if (colorOrFormat == ChatColor.RESET) {
+                        chatColor = null
+                        chatFormat = null
+                    }
+                }
+            }
+            index = matcher.end()
         }
-        return true
+        val textComponent = TextComponent(template.substring(index, template.length))
+        if (chatColor != null) {
+            textComponent.color = chatColor
+        }
+        if (chatFormat != null) {
+            textComponent.isObfuscated = chatFormat == ChatColor.MAGIC
+            textComponent.isBold = chatFormat == ChatColor.BOLD
+            textComponent.isStrikethrough = chatFormat == ChatColor.STRIKETHROUGH
+            textComponent.isUnderlined = chatFormat == ChatColor.UNDERLINE
+            textComponent.isItalic = chatFormat == ChatColor.ITALIC
+        }
+        messageComponents.add(textComponent)
+        return messageComponents.toTypedArray()
     }
 }
