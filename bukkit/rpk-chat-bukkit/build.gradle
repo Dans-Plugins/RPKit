@@ -49,7 +49,16 @@ dependencies {
     implementation project(":bukkit:rpk-drink-lib-bukkit")
     implementation project(":bukkit:rpk-language-lib-bukkit")
     implementation project(":bukkit:rpk-chat-lib-bukkit")
+    testImplementation group: "org.jetbrains.kotlinx", name: "kotlinx-coroutines-core", version: "1.6.4"
+    testImplementation group: "io.kotest", name: "kotest-runner-junit5-jvm", version: "5.5.4"
+    testImplementation group: "io.kotest", name: "kotest-framework-engine-jvm", version: "5.5.4"
+    testImplementation group: "io.kotest", name: "kotest-assertions-core-jvm", version: "5.5.4"
+    testImplementation group: "io.mockk", name: "mockk", version: "1.13.3"
     jooqGenerator "org.jooq:jooq-meta-extensions:3.17.6"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 processResources {
