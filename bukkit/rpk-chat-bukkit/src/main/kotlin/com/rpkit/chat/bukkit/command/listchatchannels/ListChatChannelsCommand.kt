@@ -32,6 +32,7 @@ import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Level
 import java.util.regex.Pattern
 
 /**
@@ -68,11 +69,28 @@ class ListChatChannelsCommand(private val plugin: RPKChatBukkit) : CommandExecut
         // concurrently, but the lines are sent in chat channel order rather than in whichever
         // order the queries happen to finish in.
         val chatChannels = chatChannelService.chatChannels.toList()
-        val listenersFutures = chatChannels.map(RPKChatChannel::listeners)
+        // Each query is turned into a null-on-failure future before the queries are awaited
+        // together, so a chat channel whose listeners cannot be resolved is skipped instead of
+        // completing the combined future exceptionally and suppressing every other line.
+        val listenersFutures = chatChannels.map { chatChannel ->
+            chatChannel.listeners.handle { listeners, exception ->
+                if (exception != null) {
+                    plugin.logger.log(
+                        Level.SEVERE,
+                        "Failed to get listeners for chat channel ${chatChannel.name.value}",
+                        exception
+                    )
+                    null
+                } else {
+                    listeners
+                }
+            }
+        }
         CompletableFuture.allOf(*listenersFutures.toTypedArray()).thenAccept {
             chatChannels.forEachIndexed { index, chatChannel ->
+                val listeners = listenersFutures[index].join() ?: return@forEachIndexed
                 sender.spigot().sendMessage(
-                    *chatChannelComponents(chatChannel, listenersFutures[index].join(), minecraftProfile)
+                    *chatChannelComponents(chatChannel, listeners, minecraftProfile)
                 )
             }
         }
