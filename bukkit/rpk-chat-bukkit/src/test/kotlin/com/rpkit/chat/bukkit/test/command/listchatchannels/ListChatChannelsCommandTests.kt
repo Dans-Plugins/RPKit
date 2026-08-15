@@ -32,11 +32,14 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.verify
 import net.md_5.bungee.api.chat.BaseComponent
 import org.bukkit.command.Command
 import org.bukkit.entity.Player
 import java.awt.Color
 import java.util.concurrent.CompletableFuture
+import java.util.logging.Level
+import java.util.logging.Logger
 
 /**
  * The template is deliberately free of colour codes: these tests are about which line is sent
@@ -174,6 +177,100 @@ class ListChatChannelsCommandTests : WordSpec({
 
             val listChatChannelsCommand = ListChatChannelsCommand(plugin)
             listChatChannelsCommand.onCommand(sender, mockk<Command>(), "listchatchannels", emptyArray()) shouldBe true
+
+            sentLines shouldBe emptyList<String>()
+        }
+
+        "skip a chat channel whose listeners query fails and still send the rest in order" {
+            val messages = mockk<ChatMessages>()
+            every { messages["listchatchannels-title"] } returns "chat channels:"
+            every { messages["listchatchannels-item", any()] } returns ITEM_TEMPLATE
+            val logger = mockk<Logger>(relaxed = true)
+            val plugin = mockk<RPKChatBukkit>()
+            every { plugin.messages } returns messages
+            every { plugin.logger } returns logger
+
+            val alphaListeners = CompletableFuture<List<RPKMinecraftProfile>>()
+            val betaListeners = CompletableFuture<List<RPKMinecraftProfile>>()
+            val gammaListeners = CompletableFuture<List<RPKMinecraftProfile>>()
+            val chatChannelService = mockk<RPKChatChannelService>()
+            every { chatChannelService.chatChannels } returns listOf(
+                chatChannel("alpha", alphaListeners),
+                chatChannel("beta", betaListeners),
+                chatChannel("gamma", gammaListeners)
+            )
+
+            val minecraftProfile = mockk<RPKMinecraftProfile>()
+            every { minecraftProfile.id } returns RPKMinecraftProfileId(1)
+            val sender = mockk<Player>()
+            val senderSpigot = mockk<Player.Spigot>()
+            val sentLines = mutableListOf<String>()
+            every { sender.hasPermission("rpkit.chat.command.listchatchannels") } returns true
+            every { sender.sendMessage(any<String>()) } just runs
+            every { sender.spigot() } returns senderSpigot
+            every { senderSpigot.sendMessage(*anyVararg<BaseComponent>()) } answers {
+                sentLines += plainText(call.invocation.args)
+            }
+            val minecraftProfileService = mockk<RPKMinecraftProfileService>()
+            every { minecraftProfileService.getPreloadedMinecraftProfile(sender) } returns minecraftProfile
+            val testServicesDelegate = mockk<ServicesDelegate>()
+            every { testServicesDelegate[RPKMinecraftProfileService::class.java] } returns minecraftProfileService
+            every { testServicesDelegate[RPKChatChannelService::class.java] } returns chatChannelService
+            Services.delegate = testServicesDelegate
+
+            val listChatChannelsCommand = ListChatChannelsCommand(plugin)
+            listChatChannelsCommand.onCommand(sender, mockk<Command>(), "listchatchannels", emptyArray()) shouldBe true
+
+            val betaFailure = RuntimeException("listeners query failed")
+            gammaListeners.complete(emptyList())
+            betaListeners.completeExceptionally(betaFailure)
+            alphaListeners.complete(emptyList())
+
+            // Before this fix a single failing query completed the combined future
+            // exceptionally, so none of these lines was sent at all.
+            sentLines shouldBe listOf("- alpha (Unmute)", "- gamma (Unmute)")
+            verify {
+                logger.log(Level.SEVERE, "Failed to get listeners for chat channel beta", any<Throwable>())
+            }
+        }
+
+        "send nothing but the title when every listeners query fails" {
+            val messages = mockk<ChatMessages>()
+            every { messages["listchatchannels-title"] } returns "chat channels:"
+            every { messages["listchatchannels-item", any()] } returns ITEM_TEMPLATE
+            val plugin = mockk<RPKChatBukkit>()
+            every { plugin.messages } returns messages
+            every { plugin.logger } returns mockk(relaxed = true)
+
+            val alphaListeners = CompletableFuture<List<RPKMinecraftProfile>>()
+            val betaListeners = CompletableFuture<List<RPKMinecraftProfile>>()
+            val chatChannelService = mockk<RPKChatChannelService>()
+            every { chatChannelService.chatChannels } returns listOf(
+                chatChannel("alpha", alphaListeners),
+                chatChannel("beta", betaListeners)
+            )
+
+            val sender = mockk<Player>()
+            val senderSpigot = mockk<Player.Spigot>()
+            val sentLines = mutableListOf<String>()
+            every { sender.hasPermission("rpkit.chat.command.listchatchannels") } returns true
+            every { sender.sendMessage(any<String>()) } just runs
+            every { sender.spigot() } returns senderSpigot
+            every { senderSpigot.sendMessage(*anyVararg<BaseComponent>()) } answers {
+                sentLines += plainText(call.invocation.args)
+            }
+            val minecraftProfileService = mockk<RPKMinecraftProfileService>()
+            every { minecraftProfileService.getPreloadedMinecraftProfile(sender) } returns mockk()
+            val testServicesDelegate = mockk<ServicesDelegate>()
+            every { testServicesDelegate[RPKMinecraftProfileService::class.java] } returns minecraftProfileService
+            every { testServicesDelegate[RPKChatChannelService::class.java] } returns chatChannelService
+            Services.delegate = testServicesDelegate
+
+            val listChatChannelsCommand = ListChatChannelsCommand(plugin)
+            listChatChannelsCommand.onCommand(sender, mockk<Command>(), "listchatchannels", emptyArray()) shouldBe true
+
+            alphaListeners.completeExceptionally(RuntimeException("listeners query failed"))
+            betaListeners.completeExceptionally(RuntimeException("listeners query failed"))
 
             sentLines shouldBe emptyList<String>()
         }
