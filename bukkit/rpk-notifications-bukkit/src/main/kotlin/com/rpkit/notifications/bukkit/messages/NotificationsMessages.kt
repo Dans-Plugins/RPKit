@@ -95,6 +95,7 @@ class NotificationsMessages(plugin: RPKNotificationsBukkit): BukkitMessages(plug
     val notificationDismissInvalidRecipient = get("notification-dismiss-invalid-recipient")
     val notificationDismissInvalidNotification = get("notification-dismiss-invalid-notification")
     val notificationDismissValid = get("notification-dismiss-valid")
+    val notificationViewUsage = get("notification-view-usage")
     val notificationViewInvalidRecipient = get("notification-view-invalid-recipient")
     val notificationViewInvalidNotification = get("notification-view-invalid-notification")
     val notificationViewValid = getParameterizedList("notification-view-valid")

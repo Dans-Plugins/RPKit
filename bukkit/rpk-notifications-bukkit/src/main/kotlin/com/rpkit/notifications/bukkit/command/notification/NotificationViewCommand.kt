@@ -45,7 +45,7 @@ class NotificationViewCommand(private val plugin: RPKNotificationsBukkit) : RPKC
             return completedFuture(NoPermissionFailure("rpkit.notifications.command.notification.view"))
         }
         if (args.isEmpty()) {
-            sender.sendMessage(plugin.messages.notificationDismissUsage)
+            sender.sendMessage(plugin.messages.notificationViewUsage)
             return completedFuture(IncorrectUsageFailure())
         }
         if (sender !is RPKMinecraftProfile) {
