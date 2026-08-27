@@ -1,5 +1,6 @@
 notification-usage: '&cUsage: /notification [dismiss|list|view]'
 notification-dismiss-usage: '&cUsage: /notification dismiss [id]'
+notification-view-usage: '&cUsage: /notification view [id]'
 notification-dismiss-invalid-notification-id-not-a-number: '&cNotification ID must be a number.'
 notification-dismiss-invalid-recipient: '&cYou may not dismiss that notification.'
 notification-dismiss-invalid-notification: '&cThere is no notification with that ID.'
