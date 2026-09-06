@@ -57,7 +57,8 @@ private const val NO_NOTIFICATION_SERVICE = "no notification service"
 private const val LIST_TITLE = "notifications:"
 private const val LIST_ITEM = "a notification"
 private const val PAGE_FOOTER = "page 1"
-private const val INVALID_PAGE = "invalid page 1"
+private const val INVALID_PAGE = "invalid page"
+private const val NO_NOTIFICATIONS = "no notifications"
 
 private fun plugin(): RPKNotificationsBukkit {
     val messages = mockk<NotificationsMessages>()
@@ -67,6 +68,7 @@ private fun plugin(): RPKNotificationsBukkit {
     every { messages.noNotificationService } returns NO_NOTIFICATION_SERVICE
     every { messages.notificationListTitle } returns LIST_TITLE
     every { messages.notificationListItemHover } returns "click to view"
+    every { messages.notificationListNoNotifications } returns NO_NOTIFICATIONS
     every { messages.previousPage } returns "previous"
     every { messages.previousPageHover } returns "previous hover"
     every { messages.nextPage } returns "next"
@@ -189,9 +191,7 @@ class NotificationListCommandTests : WordSpec({
             recording.sentLines shouldBe listOf(LIST_TITLE, LIST_ITEM, PAGE_FOOTER)
         }
 
-        // A player with no notifications currently gets the invalid page message rather than an
-        // empty list, because an empty list has no page 1 for the paginated view to render.
-        "send the invalid page message when the sender has no notifications" {
+        "send the no notifications message when the sender has no notifications" {
             val profile = mockk<RPKProfile>()
             val recording = recordingMinecraftProfile(profile)
             val plugin = plugin()
@@ -200,6 +200,23 @@ class NotificationListCommandTests : WordSpec({
             Services.delegate = servicesDelegate(notificationService)
 
             val result = NotificationListCommand(plugin).onCommand(recording.minecraftProfile, emptyArray()).join()
+
+            result shouldBe CommandSuccess
+            recording.sentLines shouldBe emptyList<String>()
+            verify { recording.minecraftProfile.sendMessage(NO_NOTIFICATIONS) }
+            verify(exactly = 0) { recording.minecraftProfile.sendMessage(INVALID_PAGE) }
+        }
+
+        "send the invalid page message for a page the sender's notifications do not reach" {
+            val profile = mockk<RPKProfile>()
+            val recording = recordingMinecraftProfile(profile)
+            val plugin = plugin()
+            val notificationService = mockk<RPKNotificationService>()
+            every { notificationService.getNotifications(profile) } returns
+                    completedFuture(listOf(notification(profile)))
+            Services.delegate = servicesDelegate(notificationService)
+
+            val result = NotificationListCommand(plugin).onCommand(recording.minecraftProfile, arrayOf("2")).join()
 
             result shouldBe CommandSuccess
             recording.sentLines shouldBe emptyList<String>()

@@ -108,6 +108,7 @@ class NotificationsMessages(plugin: RPKNotificationsBukkit): BukkitMessages(plug
     val notificationListItem = getParameterized("notification-list-item")
         .let(::NotificationListItemMessage)
     val notificationListItemHover = get("notification-list-item-hover")
+    val notificationListNoNotifications = get("notification-list-no-notifications")
     val notFromConsole = get("not-from-console")
     val noProfileSelf = get("no-profile-self")
     val noNotificationService = get("no-notification-service")
