@@ -62,6 +62,10 @@ class NotificationListCommand(private val plugin: RPKNotificationsBukkit) : RPKC
         }
         val page = args.lastOrNull()?.toIntOrNull() ?: 1
         return notificationService.getNotifications(profile).thenApply { notifications ->
+            if (notifications.isEmpty()) {
+                sender.sendMessage(plugin.messages.notificationListNoNotifications)
+                return@thenApply CommandSuccess
+            }
             val view = PaginatedView.fromChatComponents(
                 TextComponent.fromLegacyText(plugin.messages.notificationListTitle),
                 notifications
