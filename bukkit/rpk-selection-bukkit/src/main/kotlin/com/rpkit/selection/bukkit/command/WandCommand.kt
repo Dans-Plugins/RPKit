@@ -34,7 +34,12 @@ class WandCommand(private val plugin: RPKSelectionBukkit) : CommandExecutor {
             sender.sendMessage(plugin.messages["not-from-console"])
             return true
         }
-        sender.inventory.addItem(plugin.config.getItemStack("wand-item"))
+        val wandItem = plugin.config.getItemStack("wand-item")
+        if (wandItem == null) {
+            sender.sendMessage(plugin.messages["no-wand-item"])
+            return true
+        }
+        sender.inventory.addItem(wandItem)
         sender.sendMessage(plugin.messages["wand-valid"])
         return true
     }
