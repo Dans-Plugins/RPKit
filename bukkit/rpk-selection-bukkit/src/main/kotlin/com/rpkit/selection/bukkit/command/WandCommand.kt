@@ -39,7 +39,11 @@ class WandCommand(private val plugin: RPKSelectionBukkit) : CommandExecutor {
             sender.sendMessage(plugin.messages["no-wand-item"])
             return true
         }
-        sender.inventory.addItem(wandItem)
+        val leftovers = sender.inventory.addItem(wandItem)
+        if (leftovers.isNotEmpty()) {
+            sender.sendMessage(plugin.messages["wand-inventory-full"])
+            return true
+        }
         sender.sendMessage(plugin.messages["wand-valid"])
         return true
     }
