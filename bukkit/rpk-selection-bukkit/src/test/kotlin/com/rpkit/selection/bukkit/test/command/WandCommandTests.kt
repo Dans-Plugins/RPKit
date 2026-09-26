@@ -39,6 +39,7 @@ private const val NO_PERMISSION_WAND = "no permission to obtain a wand"
 private const val NOT_FROM_CONSOLE = "not from console"
 private const val WAND_VALID = "here's a wand"
 private const val NO_WAND_ITEM = "no wand item configured"
+private const val WAND_INVENTORY_FULL = "inventory full"
 
 /**
  * The stubbed messages are deliberately free of colour codes: these tests are about which line is
@@ -51,6 +52,7 @@ private fun plugin(wandItem: ItemStack? = mockk()): RPKSelectionBukkit {
     every { messages["not-from-console"] } returns NOT_FROM_CONSOLE
     every { messages["wand-valid"] } returns WAND_VALID
     every { messages["no-wand-item"] } returns NO_WAND_ITEM
+    every { messages["wand-inventory-full"] } returns WAND_INVENTORY_FULL
     val config = mockk<FileConfiguration>()
     every { config.getItemStack("wand-item") } returns wandItem
     val plugin = mockk<RPKSelectionBukkit>()
@@ -126,6 +128,18 @@ class WandCommandTests : WordSpec({
 
             recording.sentLines shouldBe listOf(NO_WAND_ITEM)
             verify(exactly = 0) { recording.inventory.addItem(any()) }
+        }
+
+        "tell the sender their inventory is full when the wand does not fit" {
+            val recording = recordingPlayer()
+            val wandItem = mockk<ItemStack>()
+            every { recording.inventory.addItem(wandItem) } returns hashMapOf(0 to wandItem)
+            val plugin = plugin(wandItem = wandItem)
+
+            runWandCommand(plugin, recording.player) shouldBe true
+
+            verify(exactly = 1) { recording.inventory.addItem(wandItem) }
+            recording.sentLines shouldBe listOf(WAND_INVENTORY_FULL)
         }
     }
 
