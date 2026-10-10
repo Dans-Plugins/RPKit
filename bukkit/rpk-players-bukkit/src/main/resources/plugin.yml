@@ -26,6 +26,7 @@ commands:
       Units preferences command
       /units - Display unit preferences
       /units set [unit type] [unit] - Set unit preference for given unit type
+    usage: /<command> [set]
 permissions:
   rpkit.players.command.profile.link:
     description: Allows linking other profiles
@@ -38,6 +39,9 @@ permissions:
     default: true
   rpkit.players.command.profile.link.github:
     description: Allows linking Github profiles
+    default: true
+  rpkit.players.command.profile.link.discord:
+    description: Allows linking Discord profiles
     default: true
   rpkit.players.command.profile.view.self:
     description: Allows viewing your own profile
