@@ -26,7 +26,7 @@ class CharacterGroupViewCommand(private val plugin: RPKPermissionsBukkit) : Comm
             sender.sendMessage(plugin.messages.notFromConsole)
             return true
         }
-        if (!sender.hasPermission("rpkit.permissions.command.character.group.view")) {
+        if (!sender.hasPermission("rpkit.permissions.command.charactergroup.view")) {
             sender.sendMessage(plugin.messages.noPermissionCharacterGroupView)
             return true
         }
