@@ -44,7 +44,7 @@ class DistanceCommand(private val plugin: RPKEssentialsBukkit) : CommandExecutor
         }
         val bukkitPlayer = plugin.server.getPlayer(args[0])
         if (bukkitPlayer == null) {
-            sender.sendMessage(plugin.messages["distance-invalid-offline"])
+            sender.sendMessage(plugin.messages["distance-invalid-player"])
             return true
         }
         if (bukkitPlayer.world !== sender.world) {
@@ -73,7 +73,7 @@ class DistanceCommand(private val plugin: RPKEssentialsBukkit) : CommandExecutor
         }
         val character = characterService.getPreloadedActiveCharacter(minecraftProfile)
         if (character == null) {
-            sender.sendMessage(plugin.messages["no-character"])
+            sender.sendMessage(plugin.messages["no-character-other"])
             return true
         }
         trackingService.isTrackable(character).thenAccept { isTrackable ->
