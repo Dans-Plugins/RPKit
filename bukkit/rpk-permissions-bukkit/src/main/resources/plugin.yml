@@ -13,10 +13,10 @@ api-version: '1.19'
 commands:
   group:
     description: Group management command
-    usage: /<command> [add|remove|list|view]
+    usage: /<command> [add|remove|list|view|switchpriority]
   charactergroup:
     description: Character group management command
-    usage: /<command> [add|remove|view]
+    usage: /<command> [add|remove|view|switchpriority]
   permissions:
     description: Permissions management commands
     usage: /<command> [reload]
@@ -32,6 +32,9 @@ permissions:
     default: op
   rpkit.permissions.command.group.view:
     description: Allows viewing a player's groups
+    default: op
+  rpkit.permissions.command.group.switchpriority:
+    description: Allows switching the priority of a player's or character's groups
     default: op
   rpkit.permissions.command.charactergroup.add:
     description: Allows adding groups to characters
