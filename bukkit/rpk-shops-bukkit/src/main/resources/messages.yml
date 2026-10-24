@@ -33,4 +33,5 @@ no-minecraft-profile-service: '&cThere is no Minecraft profile service available
 no-character-service: '&cThere is no character service available.'
 no-economy-service: '&cThere is no economy service available.'
 no-bank-service: '&cThere is no bank service available.'
+no-currency-service: '&cThere is no currency service available.'
 no-shop-count-service: '&cThere is no shop count service available.'
