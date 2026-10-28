@@ -42,6 +42,15 @@ dependencies {
     implementation project(":bukkit:rpk-bank-lib-bukkit")
     implementation project(":bukkit:rpk-payment-lib-bukkit")
     implementation project(":bukkit:rpk-notification-lib-bukkit")
+    testImplementation group: "org.jetbrains.kotlinx", name: "kotlinx-coroutines-core", version: "1.6.4"
+    testImplementation group: "io.kotest", name: "kotest-runner-junit5-jvm", version: "5.5.4"
+    testImplementation group: "io.kotest", name: "kotest-framework-engine-jvm", version: "5.5.4"
+    testImplementation group: "io.kotest", name: "kotest-assertions-core-jvm", version: "5.5.4"
+    testImplementation group: "io.mockk", name: "mockk", version: "1.13.3"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 processResources {

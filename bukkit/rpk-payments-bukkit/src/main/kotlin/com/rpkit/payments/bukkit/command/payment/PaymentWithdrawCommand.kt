@@ -77,7 +77,7 @@ class PaymentWithdrawCommand(private val plugin: RPKPaymentsBukkit) : CommandExe
         }
         paymentGroupService.getPaymentGroup(RPKPaymentGroupName(args.dropLast(1).joinToString(" "))).thenAccept getPaymentGroup@{ paymentGroup ->
             if (paymentGroup == null) {
-                sender.sendMessage(plugin.messages[".payment-withdraw-invalid-group"])
+                sender.sendMessage(plugin.messages["payment-withdraw-invalid-group"])
                 return@getPaymentGroup
             }
             paymentGroup.owners.thenAccept { owners ->
