@@ -15,14 +15,14 @@ depend:
 commands:
   monsterspawnarea:
     description: Monster spawn area management command
-    usage: /<command> [create|remove|addmonster|removemonster]
+    usage: /<command> [create|delete|addmonster|removemonster]
     aliases: [msa]
 permissions:
   rpkit.monsters.command.monsterspawnarea.create:
     description: Allows creating monster spawn areas
     default: op
-  rpkit.monsters.command.monsterspawnarea.remove:
-    description: Allows removing monster spawn areas
+  rpkit.monsters.command.monsterspawnarea.delete:
+    description: Allows deleting monster spawn areas
     default: op
   rpkit.monsters.command.monsterspawnarea.addmonster:
     description: Allows adding monsters to spawn areas
