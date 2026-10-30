@@ -31,6 +31,9 @@ permissions:
   rpkit.travel.command.warp:
     description: Allows you to use warps
     default: op
+  rpkit.travel.command.untame:
+    description: Allows you to untame your tamed creatures
+    default: op
   rpkit.travel.sign.warp.create:
     description: Allows the creation of warp signs
     default: op
