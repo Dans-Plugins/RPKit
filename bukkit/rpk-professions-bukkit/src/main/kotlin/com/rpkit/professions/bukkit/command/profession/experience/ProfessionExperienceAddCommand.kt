@@ -70,7 +70,9 @@ class ProfessionExperienceAddCommand(val plugin: RPKProfessionsBukkit) : Command
             if (sender == target) {
                 sender.sendMessage(plugin.messages["no-minecraft-profile-self"])
             } else {
-                sender.sendMessage(plugin.messages["no-minecraft-profile-other"])
+                sender.sendMessage(plugin.messages["no-minecraft-profile-other", mapOf(
+                        "player" to target.name
+                )])
             }
             return true
         }
@@ -84,7 +86,9 @@ class ProfessionExperienceAddCommand(val plugin: RPKProfessionsBukkit) : Command
             if (sender == target) {
                 sender.sendMessage(plugin.messages["no-character-self"])
             } else {
-                sender.sendMessage(plugin.messages["no-character-other"])
+                sender.sendMessage(plugin.messages["no-character-other", mapOf(
+                        "player" to target.name
+                )])
             }
             return true
         }
