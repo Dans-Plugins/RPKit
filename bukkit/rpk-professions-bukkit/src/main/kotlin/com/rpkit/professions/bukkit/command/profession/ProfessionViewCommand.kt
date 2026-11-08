@@ -98,18 +98,19 @@ class ProfessionViewCommand(val plugin: RPKProfessionsBukkit) : CommandExecutor 
             sender.sendMessage(plugin.messages["profession-view-valid-title"])
             characterProfessions.forEach { profession ->
                 val level = professionService.getProfessionLevel(character, profession).join()
+                val totalExperience = professionService.getProfessionExperience(character, profession).join()
                 val experienceSinceLastLevel =
                     if (level > 1) {
-                        professionService.getProfessionExperience(character, profession).join() - profession.getExperienceNeededForLevel(level)
+                        totalExperience - profession.getExperienceNeededForLevel(level)
                     } else {
-                        professionService.getProfessionExperience(character, profession).join()
+                        totalExperience
                     }
                 val experienceNeededForNextLevel =
                     profession.getExperienceNeededForLevel(level + 1) - profession.getExperienceNeededForLevel(level)
                 sender.sendMessage(plugin.messages["profession-view-valid-item", mapOf(
                     "profession" to profession.name.value,
                     "level" to level.toString(),
-                    "total_experience" to professionService.getProfessionExperience(character, profession).toString(),
+                    "total_experience" to totalExperience.toString(),
                     "total_next_level_experience" to profession.getExperienceNeededForLevel(level + 1).toString(),
                     "experience" to experienceSinceLastLevel.toString(),
                     "next_level_experience" to experienceNeededForNextLevel.toString()
