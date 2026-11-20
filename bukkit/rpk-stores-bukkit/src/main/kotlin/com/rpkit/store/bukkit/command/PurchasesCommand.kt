@@ -71,7 +71,7 @@ class PurchasesCommand(private val plugin: RPKStoresBukkit) : CommandExecutor {
                         "store_item_cost" to String.format(
                             "%.02f",
                             purchase.storeItem.cost / 100.0
-                        ) + plugin.config.getString("purchases.currency")
+                        ) + plugin.config.getString("payments.currency")
                     )]
                 )
             }
